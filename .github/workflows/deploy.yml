@@ -1,0 +1,66 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_cloudflare:
+        description: Deploy Cloudflare Terraform
+        required: false
+        default: 'false'
+
+jobs:
+  deploy-azure:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init (Azure)
+        working-directory: infra/azure
+        run: terraform init
+
+      - name: Terraform Apply (Azure)
+        working-directory: infra/azure
+        run: terraform apply -auto-approve
+
+  deploy-cloudflare:
+    if: ${{ github.event.inputs.deploy_cloudflare == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init (Cloudflare)
+        working-directory: infra/cloudflare
+        env:
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_demo_hostname: ${{ vars.DEMO_HOSTNAME }}
+          TF_VAR_azure_origin_hostname: ${{ vars.AZURE_ORIGIN_HOSTNAME }}
+        run: terraform init
+
+      - name: Terraform Apply (Cloudflare)
+        working-directory: infra/cloudflare
+        env:
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_demo_hostname: ${{ vars.DEMO_HOSTNAME }}
+          TF_VAR_azure_origin_hostname: ${{ vars.AZURE_ORIGIN_HOSTNAME }}
+        run: terraform apply -auto-approve
