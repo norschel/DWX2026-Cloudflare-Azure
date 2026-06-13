@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EdgeBeforeAzure.Api/EdgeBeforeAzure.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EdgeBeforeAzure.Api.Tests/EdgeBeforeAzure.Api.Tests.csproj" />
+  </Folder>
+</Solution>
