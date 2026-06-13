@@ -38,6 +38,8 @@ jobs:
   deploy-cloudflare:
     if: ${{ github.event.inputs.deploy_cloudflare == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4

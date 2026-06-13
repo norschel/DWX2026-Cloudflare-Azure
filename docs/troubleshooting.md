@@ -1,7 +1,7 @@
 # Troubleshooting
 
 ## Local fallback mode
-Wenn Cloudflare/Azure nicht erreichbar ist, lokal ausführen:
+If Cloudflare or Azure is unavailable during a demo, run everything locally:
 ```bash
 dotnet run --project src/EdgeBeforeAzure.Api/EdgeBeforeAzure.Api.csproj
 export DEMO_BASE_URL=http://localhost:5000
@@ -10,14 +10,14 @@ export DEMO_BASE_URL=http://localhost:5000
 ./scripts/cache-demo-3.sh "$DEMO_BASE_URL"
 ```
 
-## Häufige Probleme
-- **Port-Konflikt:** Anderen Port in `ASPNETCORE_URLS` setzen.
-- **Keine Cache-HITs:** Cloudflare Cache-Regel prüfen und Cache purgen.
-- **Crawler bleiben 200:** Block-Regel für GPTBot/ClaudeBot/PerplexityBot aktivieren.
-- **Terraform Auth Fehler:** GitHub Secrets (`AZURE_CREDENTIALS`, `CLOUDFLARE_*`) prüfen.
+## Common issues
+- **Port conflict:** set a different value for `ASPNETCORE_URLS`.
+- **No cache HITs:** verify Cloudflare cache rule and purge cache.
+- **Crawler requests still 200:** enable bot block rules for GPTBot/ClaudeBot/PerplexityBot.
+- **Terraform auth failures:** verify GitHub secrets (`AZURE_CREDENTIALS`, `CLOUDFLARE_*`).
 
 ## Environment variables
 - `ASPNETCORE_ENVIRONMENT`
 - `APPLICATIONINSIGHTS_CONNECTION_STRING`
 - `Demo__ProductsDelayMilliseconds`
-- `DEMO_BASE_URL` (für Scripts)
+- `DEMO_BASE_URL` (scripts)
