@@ -104,7 +104,7 @@ Siehe `docs/demo-3-cache.md`.
 ## GitHub Actions
 - `build.yml`: Restore, Build, Test, Publish Artifact auf PR und Push nach `main`.
 - `deploy_azure.yml`: Manuelles Deployment (`workflow_dispatch`) der Azure-Ressourcen per Terraform.
-- `deploy_cloudflare.yml`: Manuelles Deployment (`workflow_dispatch`) für Azure, optional Cloudflare.
+- `deploy_cloudflare.yml`: Manuelles Deployment (`workflow_dispatch`) der Cloudflare-Ressourcen (inkl. optionalem Schalter).
 
 Benötigte Secrets:
 - `AZURE_CREDENTIALS`
