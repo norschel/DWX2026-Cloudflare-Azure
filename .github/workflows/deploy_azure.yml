@@ -1,4 +1,4 @@
-name: Deploy_Azure
+name: Deploy Azure
 
 on:
   workflow_dispatch:
@@ -24,8 +24,16 @@ jobs:
 
       - name: Terraform Init (Azure)
         working-directory: infra/azure
-        run: terraform init
+        run: terraform init -input=false
+
+      - name: Terraform Plan (Azure)
+        working-directory: infra/azure
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform Show Plan (Azure)
+        working-directory: infra/azure
+        run: terraform show tfplan
 
       - name: Terraform Apply (Azure)
         working-directory: infra/azure
-        run: terraform apply -auto-approve
+        run: terraform apply -input=false tfplan
