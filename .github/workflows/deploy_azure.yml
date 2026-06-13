@@ -1,0 +1,39 @@
+name: Deploy Azure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-azure:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init (Azure)
+        working-directory: infra/azure
+        run: terraform init -input=false
+
+      - name: Terraform Plan (Azure)
+        working-directory: infra/azure
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform Show Plan (Azure)
+        working-directory: infra/azure
+        run: terraform show tfplan
+
+      - name: Terraform Apply (Azure)
+        working-directory: infra/azure
+        run: terraform apply -input=false tfplan
