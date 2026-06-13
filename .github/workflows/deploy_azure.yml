@@ -6,6 +6,7 @@ on:
 jobs:
   deploy-azure:
     runs-on: ubuntu-latest
+    environment: DWX2026-prod
     permissions:
       id-token: write
       contents: read
@@ -16,8 +17,6 @@ jobs:
 
       - name: Azure Login
         uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
