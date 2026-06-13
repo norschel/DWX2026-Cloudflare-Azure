@@ -9,6 +9,7 @@ on:
 jobs:
   build-test-publish:
     runs-on: ubuntu-latest
+    environment: DWX2026-prod
     permissions:
       contents: read
       id-token: write
