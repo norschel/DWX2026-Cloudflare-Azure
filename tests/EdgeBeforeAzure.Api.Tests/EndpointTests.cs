@@ -55,6 +55,29 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal("azure", values.Single());
     }
 
+    [Fact]
+    public async Task Weather_WithoutCfRay_EdgeNodeIsNull()
+    {
+        var response = await _client.GetAsync("/api/weather");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"edgeNode\":null", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Weather_WithCfRay_IncludesEdgeNode()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/weather");
+        request.Headers.Add("CF-Ray", "abc123def456-FRA");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("FRA", body, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("Mozilla/5.0 Demo Browser", "human-browser")]
     [InlineData("GPTBot", "ai-crawler")]
