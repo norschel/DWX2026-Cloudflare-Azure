@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using EdgeBeforeAzure.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -151,7 +152,11 @@ static async Task<string?> TryResolveHostNameAsync(string clientIpAddress)
             ? null
             : hostEntry.HostName;
     }
-    catch (Exception) when (true)
+    catch (SocketException)
+    {
+        return null;
+    }
+    catch (TimeoutException)
     {
         return null;
     }
