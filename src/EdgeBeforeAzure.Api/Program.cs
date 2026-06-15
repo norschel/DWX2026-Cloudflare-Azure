@@ -16,7 +16,7 @@ app.MapGet("/api/weather", async (HttpContext context, ILogger<Program> logger) 
 {
     LogDemoRequest("security-funnel", context, logger);
     context.Response.Headers.Append("x-demo-origin", "azure");
-    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
+    var clientNetwork = await GetNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
     var edgeNetwork = await GetEdgeNodeNetworkInfoAsync(context.Connection.RemoteIpAddress, logger);
 
     var cfRay = context.Request.Headers["CF-Ray"].FirstOrDefault();
@@ -46,7 +46,7 @@ app.MapGet("/api/weather", async (HttpContext context, ILogger<Program> logger) 
 app.MapGet("/api/crawler-check", async (HttpContext context, ILogger<Program> logger) =>
 {
     LogDemoRequest("ai-crawler-governance", context, logger);
-    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
+    var clientNetwork = await GetNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
     var edgeNetwork = await GetEdgeNodeNetworkInfoAsync(context.Connection.RemoteIpAddress, logger);
 
     var userAgent = context.Request.Headers.UserAgent.ToString();
@@ -71,7 +71,7 @@ app.MapGet("/api/crawler-check", async (HttpContext context, ILogger<Program> lo
 app.MapGet("/api/products", async (HttpContext context, IConfiguration configuration, ILogger<Program> logger) =>
 {
     LogDemoRequest("cache-hit-vs-origin-hit", context, logger);
-    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
+    var clientNetwork = await GetNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
     var edgeNetwork = await GetEdgeNodeNetworkInfoAsync(context.Connection.RemoteIpAddress, logger);
 
     var delayMs = Math.Max(configuration.GetValue<int?>("Demo:ProductsDelayMilliseconds") ?? 500, 0);
@@ -123,18 +123,18 @@ static void LogDemoRequest(string demoName, HttpContext context, ILogger logger)
         timestamp);
 }
 
-static async Task<ClientNetworkInfo> GetClientNetworkInfoAsync(HttpRequest request, IPAddress? remoteIpAddress, ILogger logger)
+static async Task<NetworkInfo> GetNetworkInfoAsync(HttpRequest request, IPAddress? remoteIpAddress, ILogger logger)
 {
     var clientIpAddress = GetClientIpAddress(request, remoteIpAddress);
     var clientHostName = await TryResolveHostNameAsync(clientIpAddress, logger);
-    return new ClientNetworkInfo(clientIpAddress, clientHostName);
+    return new NetworkInfo(clientIpAddress, clientHostName);
 }
 
-static async Task<ClientNetworkInfo> GetEdgeNodeNetworkInfoAsync(IPAddress? remoteIpAddress, ILogger logger)
+static async Task<NetworkInfo> GetEdgeNodeNetworkInfoAsync(IPAddress? remoteIpAddress, ILogger logger)
 {
     var edgeNodeIp = remoteIpAddress?.ToString() ?? "unknown";
     var edgeNodeHostName = await TryResolveHostNameAsync(edgeNodeIp, logger);
-    return new ClientNetworkInfo(edgeNodeIp, edgeNodeHostName);
+    return new NetworkInfo(edgeNodeIp, edgeNodeHostName);
 }
 
 static string GetClientIpAddress(HttpRequest request, IPAddress? remoteIpAddress)
@@ -183,6 +183,6 @@ static async Task<string?> TryResolveHostNameAsync(string clientIpAddress, ILogg
     }
 }
 
-internal sealed record ClientNetworkInfo(string IpAddress, string? HostName);
+internal sealed record NetworkInfo(string IpAddress, string? HostName);
 
 public partial class Program;
