@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-azure:
+  provision-infra:
     runs-on: ubuntu-latest
     environment: DWX2026-prod
     permissions:
@@ -40,3 +40,36 @@ jobs:
       - name: Terraform Apply (Azure)
         working-directory: infra/azure
         run: terraform apply -input=false tfplan
+
+  deploy-app:
+    needs: provision-infra
+    runs-on: ubuntu-latest
+    environment: DWX2026-prod
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish API
+        run: dotnet publish src/EdgeBeforeAzure.Api/EdgeBeforeAzure.Api.csproj --configuration Release --output out/api
+
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: edge-before-azure-demo-app
+          package: out/api
