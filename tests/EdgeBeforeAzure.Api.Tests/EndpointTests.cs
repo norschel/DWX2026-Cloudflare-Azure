@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace EdgeBeforeAzure.Api.Tests;
@@ -76,6 +77,32 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("\"edgeNode\":\"FRA\"", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Weather_WithCfConnectingIp_IncludesClientIp()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/weather");
+        request.Headers.Add("CF-Connecting-IP", "198.51.100.10");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("198.51.100.10", document.RootElement.GetProperty("clientIp").GetString());
+    }
+
+    [Fact]
+    public async Task Weather_WithLoopbackClientIp_TriesToResolveHostName()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/weather");
+        request.Headers.Add("CF-Connecting-IP", "127.0.0.1");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.False(string.IsNullOrWhiteSpace(document.RootElement.GetProperty("clientHostName").GetString()));
     }
 
     [Theory]
