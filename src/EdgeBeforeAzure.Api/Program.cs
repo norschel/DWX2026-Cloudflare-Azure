@@ -15,6 +15,9 @@ app.MapGet("/api/weather", (HttpContext context, ILogger<Program> logger) =>
     LogDemoRequest("security-funnel", context, logger);
     context.Response.Headers.Append("x-demo-origin", "azure");
 
+    var cfRay = context.Request.Headers["CF-Ray"].FirstOrDefault();
+    var edgeNode = cfRay?.Contains('-') == true ? cfRay.Split('-')[^1] : null;
+
     var temperature = Random.Shared.Next(-5, 38);
     var summaries = new[]
     {
@@ -25,6 +28,7 @@ app.MapGet("/api/weather", (HttpContext context, ILogger<Program> logger) =>
     {
         demo = "security-funnel",
         origin = "azure",
+        edgeNode,
         temperatureC = temperature,
         summary = summaries[Random.Shared.Next(summaries.Length)],
         timestamp = DateTimeOffset.UtcNow
