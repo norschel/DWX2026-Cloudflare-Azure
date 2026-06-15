@@ -16,7 +16,7 @@ app.MapGet("/api/weather", async (HttpContext context, ILogger<Program> logger) 
 {
     LogDemoRequest("security-funnel", context, logger);
     context.Response.Headers.Append("x-demo-origin", "azure");
-    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress);
+    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
 
     var cfRay = context.Request.Headers["CF-Ray"].FirstOrDefault();
     var edgeNode = cfRay?.Contains('-') == true ? cfRay.Split('-')[^1] : null;
@@ -43,7 +43,7 @@ app.MapGet("/api/weather", async (HttpContext context, ILogger<Program> logger) 
 app.MapGet("/api/crawler-check", async (HttpContext context, ILogger<Program> logger) =>
 {
     LogDemoRequest("ai-crawler-governance", context, logger);
-    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress);
+    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
 
     var userAgent = context.Request.Headers.UserAgent.ToString();
     var category = UserAgentCategorizer.Categorize(userAgent);
@@ -65,7 +65,7 @@ app.MapGet("/api/crawler-check", async (HttpContext context, ILogger<Program> lo
 app.MapGet("/api/products", async (HttpContext context, IConfiguration configuration, ILogger<Program> logger) =>
 {
     LogDemoRequest("cache-hit-vs-origin-hit", context, logger);
-    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress);
+    var clientNetwork = await GetClientNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
 
     var delayMs = Math.Max(configuration.GetValue<int?>("Demo:ProductsDelayMilliseconds") ?? 500, 0);
     await Task.Delay(delayMs);
@@ -114,10 +114,10 @@ static void LogDemoRequest(string demoName, HttpContext context, ILogger logger)
         timestamp);
 }
 
-static async Task<ClientNetworkInfo> GetClientNetworkInfoAsync(HttpRequest request, IPAddress? remoteIpAddress)
+static async Task<ClientNetworkInfo> GetClientNetworkInfoAsync(HttpRequest request, IPAddress? remoteIpAddress, ILogger logger)
 {
     var clientIpAddress = GetClientIpAddress(request, remoteIpAddress);
-    var clientHostName = await TryResolveHostNameAsync(clientIpAddress);
+    var clientHostName = await TryResolveHostNameAsync(clientIpAddress, logger);
     return new ClientNetworkInfo(clientIpAddress, clientHostName);
 }
 
@@ -138,7 +138,7 @@ static string GetClientIpAddress(HttpRequest request, IPAddress? remoteIpAddress
     return remoteIpAddress?.ToString() ?? "unknown";
 }
 
-static async Task<string?> TryResolveHostNameAsync(string clientIpAddress)
+static async Task<string?> TryResolveHostNameAsync(string clientIpAddress, ILogger logger)
 {
     if (!IPAddress.TryParse(clientIpAddress, out var ipAddress))
     {
@@ -160,8 +160,9 @@ static async Task<string?> TryResolveHostNameAsync(string clientIpAddress)
     {
         return null;
     }
-    catch (Exception)
+    catch (Exception exception)
     {
+        logger.LogWarning(exception, "Reverse DNS lookup failed for client IP {ClientIpAddress}", clientIpAddress);
         return null;
     }
 }
