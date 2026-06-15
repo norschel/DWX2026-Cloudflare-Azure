@@ -1,9 +1,20 @@
 using System.Net;
 using System.Net.Sockets;
 using EdgeBeforeAzure.Api;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
+
+var imagesPath = Path.Combine(builder.Environment.ContentRootPath, "images");
+if (Directory.Exists(imagesPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(imagesPath),
+        RequestPath = "/images"
+    });
+}
 
 app.MapGet("/", () => Results.Ok(new
 {
