@@ -1,8 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "pt7/ypunLGI=",
+  "dgSpecHash": "stMseaXivp8=",
   "success": true,
   "projectFilePath": "/home/runner/work/DWX2026-Cloudflare-Azure/DWX2026-Cloudflare-Azure/norschel/DWX2026-Cloudflare-Azure/src/EdgeBeforeAzure.Api/EdgeBeforeAzure.Api.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "/tmp/codeql-scratch-5d5bd46c26293a57/dbs/csharp/working/packages/microsoft.netcore.app.ref/10.0.8/microsoft.netcore.app.ref.10.0.8.nupkg.sha512",
+    "/tmp/codeql-scratch-5d5bd46c26293a57/dbs/csharp/working/packages/microsoft.aspnetcore.app.ref/10.0.8/microsoft.aspnetcore.app.ref.10.0.8.nupkg.sha512",
+    "/tmp/codeql-scratch-5d5bd46c26293a57/dbs/csharp/working/packages/microsoft.netcore.app.host.linux-x64/10.0.8/microsoft.netcore.app.host.linux-x64.10.0.8.nupkg.sha512"
+  ],
   "logs": []
 }
