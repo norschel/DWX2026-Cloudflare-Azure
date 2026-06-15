@@ -15,8 +15,8 @@ app.MapGet("/api/weather", (HttpContext context, ILogger<Program> logger) =>
     LogDemoRequest("security-funnel", context, logger);
     context.Response.Headers.Append("x-demo-origin", "azure");
 
-    var cfRay = context.Request.Headers["CF-Ray"].ToString();
-    var edgeNode = cfRay.Contains('-') ? cfRay.Split('-')[^1] : null;
+    var cfRay = context.Request.Headers["CF-Ray"].FirstOrDefault();
+    var edgeNode = cfRay?.Contains('-') == true ? cfRay.Split('-')[^1] : null;
 
     var temperature = Random.Shared.Next(-5, 38);
     var summaries = new[]

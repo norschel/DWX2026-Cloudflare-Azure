@@ -75,7 +75,7 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("FRA", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"edgeNode\":\"FRA\"", body, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
