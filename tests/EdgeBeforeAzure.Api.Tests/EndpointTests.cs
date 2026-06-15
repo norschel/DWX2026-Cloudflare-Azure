@@ -93,6 +93,39 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Weather_IncludesEdgeNodeIp()
+    {
+        var response = await _client.GetAsync("/api/weather");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(document.RootElement.TryGetProperty("edgeNodeIp", out _));
+        Assert.True(document.RootElement.TryGetProperty("edgeNodeHostName", out _));
+    }
+
+    [Fact]
+    public async Task CrawlerCheck_IncludesEdgeNodeIp()
+    {
+        var response = await _client.GetAsync("/api/crawler-check");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(document.RootElement.TryGetProperty("edgeNodeIp", out _));
+        Assert.True(document.RootElement.TryGetProperty("edgeNodeHostName", out _));
+    }
+
+    [Fact]
+    public async Task Products_IncludesEdgeNodeIp()
+    {
+        var response = await _client.GetAsync("/api/products");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(document.RootElement.TryGetProperty("edgeNodeIp", out _));
+        Assert.True(document.RootElement.TryGetProperty("edgeNodeHostName", out _));
+    }
+
+    [Fact]
     public async Task Weather_WithLoopbackClientIp_TriesToResolveHostName()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/weather");
