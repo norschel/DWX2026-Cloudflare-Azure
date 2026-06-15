@@ -147,7 +147,7 @@ static async Task<string?> TryResolveHostNameAsync(string clientIpAddress)
 
     try
     {
-        var hostEntry = await Dns.GetHostEntryAsync(ipAddress).WaitAsync(TimeSpan.FromSeconds(1));
+        var hostEntry = await Dns.GetHostEntryAsync(ipAddress).WaitAsync(TimeSpan.FromSeconds(2));
         return string.IsNullOrWhiteSpace(hostEntry.HostName) || string.Equals(hostEntry.HostName, clientIpAddress, StringComparison.OrdinalIgnoreCase)
             ? null
             : hostEntry.HostName;
@@ -157,6 +157,10 @@ static async Task<string?> TryResolveHostNameAsync(string clientIpAddress)
         return null;
     }
     catch (TimeoutException)
+    {
+        return null;
+    }
+    catch (Exception)
     {
         return null;
     }
