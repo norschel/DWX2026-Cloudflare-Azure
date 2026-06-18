@@ -3,3 +3,5 @@
 .vs/
 *.user
 *.suo
+src/EdgeBeforeAzure.Api/.DS_Store
+.DS_Store

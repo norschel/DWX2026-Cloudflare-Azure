@@ -19,8 +19,20 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await _client.GetAsync("/api/health");
 
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("healthy", body, StringComparison.OrdinalIgnoreCase);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("healthy", document.RootElement.GetProperty("status").GetString());
+        AssertCommonNetworkMetadata(document.RootElement);
+    }
+
+    [Fact]
+    public async Task Root_ReturnsCommonNetworkMetadata()
+    {
+        var response = await _client.GetAsync("/");
+
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("edge-before-azure-demo", document.RootElement.GetProperty("service").GetString());
+        AssertCommonNetworkMetadata(document.RootElement);
     }
 
     [Fact]
@@ -99,8 +111,7 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.True(document.RootElement.TryGetProperty("edgeNodeIp", out _));
-        Assert.True(document.RootElement.TryGetProperty("edgeNodeHostName", out _));
+        AssertCommonNetworkMetadata(document.RootElement);
     }
 
     [Fact]
@@ -110,8 +121,7 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.True(document.RootElement.TryGetProperty("edgeNodeIp", out _));
-        Assert.True(document.RootElement.TryGetProperty("edgeNodeHostName", out _));
+        AssertCommonNetworkMetadata(document.RootElement);
     }
 
     [Fact]
@@ -121,8 +131,22 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.True(document.RootElement.TryGetProperty("edgeNodeIp", out _));
-        Assert.True(document.RootElement.TryGetProperty("edgeNodeHostName", out _));
+        AssertCommonNetworkMetadata(document.RootElement);
+    }
+
+    [Fact]
+    public async Task Weather_WithForwardedHost_UsesForwardedHostAsRequestHost()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/weather");
+        request.Headers.Add("X-Forwarded-Host", "demo.example.com");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("demo.example.com", document.RootElement.GetProperty("requestHost").GetString());
+        Assert.Equal("demo.example.com", document.RootElement.GetProperty("requestNode").GetString());
+        Assert.Equal("demo.example.com", document.RootElement.GetProperty("forwardedHost").GetString());
     }
 
     [Fact]
@@ -149,5 +173,19 @@ public class EndpointTests : IClassFixture<WebApplicationFactory<Program>>
         var actual = UserAgentCategorizer.Categorize(userAgent);
 
         Assert.Equal(expected, actual);
+    }
+
+    private static void AssertCommonNetworkMetadata(JsonElement root)
+    {
+        Assert.True(root.TryGetProperty("requestHost", out _));
+        Assert.True(root.TryGetProperty("requestNode", out _));
+        Assert.True(root.TryGetProperty("forwardedHost", out _));
+        Assert.True(root.TryGetProperty("edgeNode", out _));
+        Assert.True(root.TryGetProperty("edgeNodeIp", out _));
+        Assert.True(root.TryGetProperty("edgeNodeHostName", out _));
+        Assert.True(root.TryGetProperty("clientIp", out _));
+        Assert.True(root.TryGetProperty("clientHostName", out _));
+        Assert.True(root.TryGetProperty("originServerIp", out _));
+        Assert.True(root.TryGetProperty("originServerHostName", out _));
     }
 }

@@ -7,6 +7,29 @@ resource "cloudflare_dns_record" "demo_origin" {
   ttl     = 1
 }
 
+resource "cloudflare_ruleset" "demo_origin_routing" {
+  zone_id = var.cloudflare_zone_id
+  name    = "edge-before-azure-origin-routing"
+  kind    = "zone"
+  phase   = "http_request_origin"
+
+  rules = [
+    {
+      action      = "route"
+      expression  = "http.host eq \"${var.demo_hostname}\""
+      description = "Route demo hostname to Azure origin with a valid host header"
+      enabled     = true
+      action_parameters = {
+        host_header = var.azure_origin_hostname
+        origin = {
+          host = var.azure_origin_hostname
+          port = 443
+        }
+      }
+    }
+  ]
+}
+
 resource "cloudflare_ruleset" "demo_firewall" {
   zone_id = var.cloudflare_zone_id
   name    = "edge-before-azure-firewall"
