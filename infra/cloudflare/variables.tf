@@ -1,28 +1,29 @@
-variable "cloudflare_api_token" {
-  type        = string
-  description = "Cloudflare API token"
-  sensitive   = true
-}
+# variable "cloudflare_zone_id" {
+#   type        = string
+#   description = "Cloudflare zone id"
+# }
 
-variable "cloudflare_zone_id" {
-  type        = string
-  description = "Cloudflare zone id"
-}
+# Variables for Cloudflare authentication
+# variable "cloudflare_account_id" {
+#   type        = string
+#   description = "Cloudflare account id"
+# }
 
-variable "cloudflare_account_id" {
-  type        = string
-  description = "Cloudflare account id"
-}
+# variable "cloudflare_api_token" {
+#   type        = string
+#   description = "Cloudflare API token"
+#   sensitive   = true
+# }
 
-variable "demo_hostname" {
-  type        = string
-  description = "Demo FQDN managed by Cloudflare"
-}
+# variable "demo_hostname" {
+#   type        = string
+#   description = "Demo FQDN managed by Cloudflare"
+# }
 
-variable "azure_origin_hostname" {
-  type        = string
-  description = "Azure origin hostname"
-}
+# variable "azure_origin_hostname" {
+#   type        = string
+#   description = "Azure origin hostname"
+# }
 
 variable "enable_demo1_header_block_rule" {
   type        = bool

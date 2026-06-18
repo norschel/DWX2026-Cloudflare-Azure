@@ -1,15 +1,30 @@
-resource "azurerm_resource_group" "demo" {
-  name     = "rg-edge-before-azure-demo"
+# Terraform State Management and Azure Resource Provisioning
+resource "azurerm_resource_group" "state" {
+  name     = var.resource_group_name_state
   location = var.location
 }
 
-resource "azurerm_storage_account" "demo" {
+resource "azurerm_storage_account" "state" {
   name                            = "sttfstateedgewedemo001"
   location                        = var.location
-  resource_group_name             = azurerm_resource_group.demo.name
+  resource_group_name             = azurerm_resource_group.state.name
   account_tier                    = "Standard"
   account_replication_type        = "LRS"
   allow_nested_items_to_be_public = false
+}
+
+resource "azurerm_storage_container" "state" {
+  name                  = "stctfstatedemo001"
+  storage_account_id    = azurerm_storage_account.state.id
+  container_access_type = "private"
+}
+
+
+
+# Azure resources for the demo application 'Cloudflare - WebApp'
+resource "azurerm_resource_group" "demo" {
+  name     = var.resource_group_name_demo
+  location = var.location
 }
 
 resource "azurerm_log_analytics_workspace" "demo" {
@@ -37,7 +52,7 @@ resource "azurerm_service_plan" "demo" {
 }
 
 resource "azurerm_linux_web_app" "demo" {
-  name                = "edge-before-azure-demo-app"
+  name                = var.linux_web_app_name
   location            = var.location
   resource_group_name = azurerm_resource_group.demo.name
   service_plan_id     = azurerm_service_plan.demo.id
