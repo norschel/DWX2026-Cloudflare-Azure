@@ -1,7 +1,5 @@
-data "cloudflare_workers_custom_domains" "demo" {
+data "cloudflare_account" "demo" {
   account_id = var.cloudflare_account_id
-  #project_name = "ch-xebia.cftenant.com"
-  #domain_name  = "ch-xebia.cftenant.com"
 }
 
 data "azurerm_linux_web_app" "demo" {

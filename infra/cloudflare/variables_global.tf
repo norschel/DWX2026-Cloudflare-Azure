@@ -15,13 +15,13 @@ variable "subscription_id" {
 variable "cloudflare_account_id" {
   description = "The Cloudflare account ID for authentication."
   type        = string
-  default     = "f9405b66f77a3b72ba22678e8a4c9e84"
+  default     = "f9405b66f77a3b72ba22678e8a4c9e84" # 'NFR - EMEA - CH - Xebia'
 }
 
-variable "cloudflare_zone_id" {
-  description = "The Cloudflare zone ID for the domain being managed."
+variable "cloudflare_zone_name" {
+  description = "The Cloudflare zone name for the domain being managed."
   type        = string
-  default     = "e6cd46ea079c331bd5ee7c5366ef83e0"
+  default     = "ch-xebia.cftenant.com"
 }
 
 variable "cloudflare_api_token" {

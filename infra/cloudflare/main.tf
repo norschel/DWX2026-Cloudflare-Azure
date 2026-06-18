@@ -1,11 +1,11 @@
-resource "cloudflare_dns_record" "demo_origin" {
-  zone_id = var.cloudflare_zone_id
-  name    = "dwx2026-3"
-  type    = "CNAME"
-  content = data.azurerm_linux_web_app.demo.default_hostname
-  proxied = true
-  ttl     = 1
-}
+# resource "cloudflare_dns_record" "demo_origin" {
+#   zone_id = data.cloudflare_account.demo.account_id
+#   name    = "dwx2026-3"
+#   type    = "CNAME"
+#   content = data.azurerm_linux_web_app.demo.default_hostname
+#   proxied = true
+#   ttl     = 1
+# }
 
 # resource "cloudflare_ruleset" "demo_firewall" {
 #   zone_id = var.cloudflare_zone_id
