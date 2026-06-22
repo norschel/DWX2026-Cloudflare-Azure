@@ -4,13 +4,17 @@ resource "cloudflare_zone" "demo" {
   }
   name = var.zone_name
   type = "full"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "cloudflare_dns_record" "txt" {
   zone_id = cloudflare_zone.demo.id
-  name    = "asuid.app"
+  name    = "asuid.${var.domain_service_prefix_name}"
   type    = "TXT"
-  comment = "TXT record for Azure Web App custom domain verification."
+  comment = "TXT record for Azure Web App custom domain verification (without proxy)."
   content = "\"${data.azurerm_linux_web_app.demo.custom_domain_verification_id}\""
   proxied = false
   ttl     = 3600
@@ -18,30 +22,30 @@ resource "cloudflare_dns_record" "txt" {
 
 resource "cloudflare_dns_record" "cname" {
   zone_id = cloudflare_zone.demo.id
-  name    = "app"
+  name    = var.domain_service_prefix_name
   type    = "CNAME"
-  comment = "CNAME record for Azure Web App custom domain verification."
+  comment = "CNAME record for Azure Web App custom domain verification (without proxy)."
   content = data.azurerm_linux_web_app.demo.default_hostname
-  proxied = false
+  proxied = true
   ttl     = 3600
 }
 
-resource "cloudflare_dns_record" "demo" {
-  zone_id = cloudflare_zone.demo.id
-  name    = "dwx2026"
-  type    = "CNAME"
-  comment = "CNAME record pointing to Azure Web App for DWX2026 demo."
-  content = data.azurerm_linux_web_app.demo.default_hostname
-  proxied = true
-  ttl     = 1 # When a DNS record is marked as 'proxied' the TTL must be 1 as Cloudflare will control the TTL internally.
-}
+# resource "cloudflare_dns_record" "demo" {
+#   zone_id = cloudflare_zone.demo.id
+#   name    = "dwx2026"
+#   type    = "CNAME"
+#   comment = "CNAME record pointing to Azure Web App for DWX2026 demo via Cloudflare."
+#   content = data.azurerm_linux_web_app.demo.default_hostname
+#   proxied = true
+#   ttl     = 1 # When a DNS record is marked as 'proxied' the TTL must be 1 as Cloudflare will control the TTL internally.
+# }
 
 resource "azurerm_app_service_custom_hostname_binding" "demo" {
   depends_on = [
     cloudflare_dns_record.cname, # Ensure the CNAME record for the Azure Linux Web App is created before binding the custom hostname.
     cloudflare_dns_record.txt    # Ensure the TXT record for the Azure Linux Web App is created before binding the custom hostname.
   ]
-  hostname            = "app.${var.zone_name}"
+  hostname            = "${var.domain_service_prefix_name}.${var.zone_name}"
   app_service_name    = data.azurerm_linux_web_app.demo.name
   resource_group_name = data.azurerm_linux_web_app.demo.resource_group_name
 }
@@ -56,68 +60,152 @@ resource "azurerm_app_service_certificate_binding" "demo" {
   ssl_state           = "SniEnabled"
 }
 
-resource "cloudflare_ruleset" "demo" {
+resource "cloudflare_ruleset" "block" {
   zone_id     = cloudflare_zone.demo.id
-  name        = "rset-dwx2026-azure-webapp"
+  name        = "rset-dwx2026-azure-webapp-block"
   description = "Firewall ruleset for DWX2026 demo to block malicious traffic and manage caching."
   kind        = "zone"
   phase       = "http_request_firewall_custom"
 
   rules = [
     {
-      description = "Block 'demo-scanner' user-agent"
       action      = "block"
+      description = "Block 'demo-scanner' user-agent"
       expression  = "(http.user_agent contains \"demo-scanner\")"
       enabled     = true
+      action_parameters = {
+        response = {
+          content      = "You have been blocked from accessing this resource."
+          content_type = "application/json"
+          status_code  = 403
+        }
+      }
     },
     {
-      description = "Block AI bots user-agent"
       action      = "block"
+      description = "Block AI bots user-agent"
       expression  = "(http.request.uri.path ne \"/robots.txt\" and ((http.user_agent contains \"GPTBot\") or (http.user_agent contains \"PerplexityBot\")))"
       enabled     = true
+      action_parameters = {
+        response = {
+          content      = "{\"message\":\"Please contact the site owner for access.\"}"
+          content_type = "application/json"
+          status_code  = 403
+        }
+      }
     },
     {
+      action      = "block"
       description = "Block Scrappers user-agent"
-      action      = "managed_challenge"
       expression  = "(http.user_agent contains \"curl\") or (http.user_agent contains \"python-requests\")"
       enabled     = true
-    }
-
-    # {
-    #   action      = "block"
-    #   expression  = "http.request.headers[\"x-demo-traffic\"][0] eq \"suspicious\""
-    #   description = "Demo 1: block suspicious header traffic"
-    #   enabled     = var.enable_demo1_header_block_rule
-    # },
-
-
-
+    },
   ]
 }
 
-# resource "cloudflare_ruleset" "demo_cache" {
-#   zone_id = var.cloudflare_zone_id
-#   name    = "edge-before-azure-cache"
-#   kind    = "zone"
-#   phase   = "http_request_cache_settings"
+resource "cloudflare_ruleset" "ratelimit" {
+  zone_id     = cloudflare_zone.demo.id
+  name        = "rset-dwx2026-azure-webapp-ratelimit"
+  description = "Firewall ruleset for DWX2026 demo for rate limiting."
+  kind        = "zone"
+  phase       = "http_ratelimit"
 
-#   rules = [
-#     {
-#       action      = "set_cache_settings"
-#       expression  = "http.request.uri.path eq \"/api/products\""
-#       description = "Demo 3: cache products endpoint"
-#       enabled     = var.enable_demo3_cache_rule
-#       action_parameters = {
-#         cache = true
-#         edge_ttl = {
-#           mode    = "override_origin"
-#           default = 60
-#         }
-#         browser_ttl = {
-#           mode    = "override_origin"
-#           default = 60
-#         }
-#       }
-#     }
-#   ]
-# }
+  rules = [
+    {
+      action      = "block"
+      description = "Weather API free rate limit."
+      expression  = "(http.request.uri.path wildcard r\"/api/weather\")"
+      enabled     = true
+      ratelimit = {
+        characteristics = [
+          "cf.unique_visitor_id",
+          "cf.colo.id",
+        ]
+        action              = "challenge"
+        period              = 60
+        requests_per_period = 100
+        mitigation_timeout  = 60,
+      }
+      action_parameters = {
+        response = {
+          content      = "You have been rate limited. Please try again later."
+          content_type = "text/plain"
+          status_code  = 429
+        }
+        timeout = 60
+      }
+    },
+  ]
+}
+
+resource "cloudflare_ruleset" "cache" {
+  zone_id = cloudflare_zone.demo.id
+  name    = "rset-dwx2026-azure-webapp-cache"
+  kind    = "zone"
+  phase   = "http_request_cache_settings"
+
+  rules = [
+    {
+      description = "Cache Everything (Template)"
+      action      = "set_cache_settings"
+      expression  = "(http.request.uri.path wildcard r\"/api/weather\")"
+      enabled     = true
+
+
+      action_parameters = {
+        cache = true
+        edge_ttl = {
+          mode    = "override_origin"
+          default = 10
+          status_code_ttl = [
+            {
+              value       = 10
+              status_code = 200 # OK
+            },
+            {
+              value       = 300 # 5 minutes
+              status_code = 400 # Bad Request
+            }
+          ]
+        }
+        browser_ttl = {
+          mode    = "override_origin"
+          default = 10
+        }
+      }
+    },
+    {
+      description = "Cache 'Products' Website"
+      action      = "set_cache_settings"
+      expression  = "(http.request.uri.path wildcard r\"/api/products\")"
+      enabled     = true
+
+      action_parameters = {
+        cache = true
+        edge_ttl = {
+          mode    = "override_origin"
+          default = 60
+        }
+        browser_ttl = {
+          mode    = "override_origin"
+          default = 60 # 1 minute browser cache TTL
+        }
+      }
+    }
+  ]
+}
+
+resource "cloudflare_tiered_cache" "demo" {
+  zone_id = cloudflare_zone.demo.id
+  value   = "on"
+}
+
+resource "cloudflare_regional_tiered_cache" "demo" {
+  zone_id = cloudflare_zone.demo.id
+  value   = "off"
+}
+
+resource "cloudflare_zone_cache_reserve" "demo" {
+  zone_id = cloudflare_zone.demo.id
+  value   = "on"
+}
