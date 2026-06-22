@@ -27,18 +27,8 @@ resource "cloudflare_dns_record" "cname" {
   comment = "CNAME record for Azure Web App custom domain verification (without proxy)."
   content = data.azurerm_linux_web_app.demo.default_hostname
   proxied = true
-  ttl     = 3600
+  ttl     = 1
 }
-
-# resource "cloudflare_dns_record" "demo" {
-#   zone_id = cloudflare_zone.demo.id
-#   name    = "dwx2026"
-#   type    = "CNAME"
-#   comment = "CNAME record pointing to Azure Web App for DWX2026 demo via Cloudflare."
-#   content = data.azurerm_linux_web_app.demo.default_hostname
-#   proxied = true
-#   ttl     = 1 # When a DNS record is marked as 'proxied' the TTL must be 1 as Cloudflare will control the TTL internally.
-# }
 
 resource "azurerm_app_service_custom_hostname_binding" "demo" {
   depends_on = [
@@ -205,7 +195,43 @@ resource "cloudflare_regional_tiered_cache" "demo" {
   value   = "off"
 }
 
-resource "cloudflare_zone_cache_reserve" "demo" {
-  zone_id = cloudflare_zone.demo.id
-  value   = "on"
+# resource "cloudflare_zero_trust_gateway_settings" "demo" {
+#   account_id = data.cloudflare_account.demo.account_id
+
+#   settings = {
+#     tls_decrypt = {
+#       enabled = true
+#     }
+#   }
+# }
+
+resource "cloudflare_zero_trust_access_policy" "demo" {
+  account_id = data.cloudflare_account.demo.account_id
+  name       = "Allow Clientless Browser Access"
+  decision   = "allow"
+
+  include = [{
+    everyone = {}
+  }]
+}
+
+resource "cloudflare_zero_trust_gateway_policy" "demo" {
+  account_id  = data.cloudflare_account.demo.account_id
+  name        = "Isolate Health API"
+  description = "Policy to isolate the '/api/health' endpoint from all other traffic for security and performance reasons."
+  precedence  = 1000
+  enabled     = true
+  action      = "isolate"
+  filters     = ["http"]
+  traffic     = "http.request.uri == \"https://dwxapp.cfmisterazure.com/api/health\""
+
+  rule_settings = {
+    biso_admin_controls = {
+      version  = "v2"
+      download = "remote_only"
+      upload   = "disabled"
+      copy     = "remote_only"
+      paste    = "remote_only"
+    }
+  }
 }

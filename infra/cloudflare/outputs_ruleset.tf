@@ -14,11 +14,6 @@ output "ruleset_phase_block" {
   value       = try(cloudflare_ruleset.block.phase, null)
 }
 
-output "ruleset_rules_block" {
-  description = "The rules of the Cloudflare ruleset created."
-  value       = try(cloudflare_ruleset.block.rules, null)
-}
-
 output "ruleset_version_block" {
   description = "The version of the Cloudflare ruleset created."
   value       = try(cloudflare_ruleset.block.version, null)
@@ -42,11 +37,6 @@ output "ruleset_phase_ratelimit" {
   value       = try(cloudflare_ruleset.ratelimit.phase, null)
 }
 
-output "ruleset_rules_ratelimit" {
-  description = "The rules of the Cloudflare ruleset created."
-  value       = try(cloudflare_ruleset.ratelimit.rules, null)
-}
-
 output "ruleset_version_ratelimit" {
   description = "The version of the Cloudflare ruleset created."
   value       = try(cloudflare_ruleset.ratelimit.version, null)
@@ -68,11 +58,6 @@ output "ruleset_kind_cache" {
 output "ruleset_phase_cache" {
   description = "The phase of the Cloudflare ruleset created."
   value       = try(cloudflare_ruleset.cache.phase, null)
-}
-
-output "ruleset_rules_cache" {
-  description = "The rules of the Cloudflare ruleset created."
-  value       = try(cloudflare_ruleset.cache.rules, null)
 }
 
 output "ruleset_version_cache" {
