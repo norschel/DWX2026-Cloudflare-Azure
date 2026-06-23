@@ -195,29 +195,38 @@ resource "cloudflare_regional_tiered_cache" "demo" {
   value   = "off"
 }
 
-# resource "cloudflare_zero_trust_gateway_settings" "demo" {
-#   account_id = data.cloudflare_account.demo.account_id
+resource "cloudflare_zero_trust_access_policy" "rbi" {
+  account_id                     = data.cloudflare_account.demo.account_id
+  name                           = "Allow Clientless Browser Access (RBI)"
+  decision                       = "allow"
+  isolation_required             = true
+  purpose_justification_required = false
 
-#   settings = {
-#     tls_decrypt = {
-#       enabled = true
-#     }
-#   }
-# }
-
-resource "cloudflare_zero_trust_access_policy" "demo" {
-  account_id = data.cloudflare_account.demo.account_id
-  name       = "Allow Clientless Browser Access"
-  decision   = "allow"
+  connection_rules = {
+    rdp = {}
+  }
 
   include = [{
     everyone = {}
   }]
 }
 
-resource "cloudflare_zero_trust_gateway_policy" "demo" {
+resource "cloudflare_zero_trust_access_application" "rbi" {
+  account_id       = data.cloudflare_account.demo.account_id
+  name             = "DWX2026 Demo App Health API"
+  type             = "self_hosted"
+  domain           = "dwxapp.cfmisterazure.com/api/health"
+  session_duration = "24h"
+
+  policies = [{
+    id         = cloudflare_zero_trust_access_policy.rbi.id
+    precedence = 1
+  }]
+}
+
+resource "cloudflare_zero_trust_gateway_policy" "rbi" {
   account_id  = data.cloudflare_account.demo.account_id
-  name        = "Isolate Health API"
+  name        = "Isolate DWX2026 Health API"
   description = "Policy to isolate the '/api/health' endpoint from all other traffic for security and performance reasons."
   precedence  = 1000
   enabled     = true
@@ -228,10 +237,11 @@ resource "cloudflare_zero_trust_gateway_policy" "demo" {
   rule_settings = {
     biso_admin_controls = {
       version  = "v2"
-      download = "remote_only"
+      download = "disabled"
       upload   = "disabled"
-      copy     = "remote_only"
-      paste    = "remote_only"
+      copy     = "disabled"
+      paste    = "disabled"
+      printing = "disabled"
     }
   }
 }
