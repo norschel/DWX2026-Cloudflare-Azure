@@ -50,6 +50,12 @@ resource "azurerm_app_service_certificate_binding" "demo" {
   ssl_state           = "SniEnabled"
 }
 
+resource "cloudflare_zone_setting" "image_resizing" {
+  zone_id    = cloudflare_zone.demo.id
+  setting_id = "image_resizing"
+  value      = "on"
+}
+
 resource "cloudflare_ruleset" "block" {
   zone_id     = cloudflare_zone.demo.id
   name        = "rset-dwx2026-azure-webapp-block"
@@ -201,6 +207,7 @@ resource "cloudflare_zero_trust_access_policy" "rbi" {
   decision                       = "allow"
   isolation_required             = true
   purpose_justification_required = false
+  session_duration               = "24h"
 
   connection_rules = {
     rdp = {}
@@ -232,16 +239,18 @@ resource "cloudflare_zero_trust_gateway_policy" "rbi" {
   enabled     = true
   action      = "isolate"
   filters     = ["http"]
-  traffic     = "http.request.uri == \"https://dwxapp.cfmisterazure.com/api/health\""
+  traffic     = "http.request.uri.path == \"/api/health\""
 
   rule_settings = {
     biso_admin_controls = {
       version  = "v2"
+      keyboard = "disabled"
       download = "disabled"
       upload   = "disabled"
       copy     = "disabled"
       paste    = "disabled"
       printing = "disabled"
+      wm_id    = "cb4e68f5-d294-4dfd-be80-5ce9e7ae9cf2"
     }
   }
 }
