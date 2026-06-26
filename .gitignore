@@ -3,7 +3,6 @@
 .vs/
 *.user
 *.suo
-
 # generic
 *.bak
 *.core

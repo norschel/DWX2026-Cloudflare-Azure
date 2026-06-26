@@ -4,7 +4,9 @@ using EdgeBeforeAzure.Api;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration["AllowedHosts"] = "*";
 var app = builder.Build();
+var originServer = await GetOriginServerNetworkInfoAsync(app.Logger);
 
 var imagesPath = Path.Combine(builder.Environment.ContentRootPath, "images");
 if (Directory.Exists(imagesPath))
@@ -16,22 +18,38 @@ if (Directory.Exists(imagesPath))
     });
 }
 
-app.MapGet("/", () => Results.Ok(new
+app.MapGet("/", async (HttpContext context, ILogger<Program> logger) =>
 {
-    service = "edge-before-azure-demo",
-    status = "ok",
-    timestamp = DateTimeOffset.UtcNow
-}));
+    var requestHostInfo = GetRequestHostInfo(context.Request);
+    var clientNetwork = await GetNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
+    var edgeNetwork = await GetEdgeNodeNetworkInfoAsync(context.Connection.RemoteIpAddress, logger);
+
+    return Results.Ok(new
+    {
+        service = "edge-before-azure-demo",
+        status = "ok",
+        origin = "azure",
+        requestHost = requestHostInfo.EffectiveHost,
+        requestNode = requestHostInfo.EffectiveHost,
+        forwardedHost = requestHostInfo.ForwardedHost,
+        edgeNode = GetEdgeNode(context.Request),
+        edgeNodeIp = edgeNetwork.IpAddress,
+        edgeNodeHostName = edgeNetwork.HostName,
+        clientIp = clientNetwork.IpAddress,
+        clientHostName = clientNetwork.HostName,
+        originServerIp = originServer.IpAddress,
+        originServerHostName = originServer.HostName,
+        timestamp = DateTimeOffset.UtcNow
+    });
+});
 
 app.MapGet("/api/weather", async (HttpContext context, ILogger<Program> logger) =>
 {
     LogDemoRequest("security-funnel", context, logger);
     context.Response.Headers.Append("x-demo-origin", "azure");
+    var requestHostInfo = GetRequestHostInfo(context.Request);
     var clientNetwork = await GetNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
     var edgeNetwork = await GetEdgeNodeNetworkInfoAsync(context.Connection.RemoteIpAddress, logger);
-
-    var cfRay = context.Request.Headers["CF-Ray"].FirstOrDefault();
-    var edgeNode = cfRay?.Contains('-') == true ? cfRay.Split('-')[^1] : null;
 
     var temperature = Random.Shared.Next(-5, 38);
     var summaries = new[]
@@ -43,11 +61,16 @@ app.MapGet("/api/weather", async (HttpContext context, ILogger<Program> logger) 
     {
         demo = "security-funnel",
         origin = "azure",
-        edgeNode,
+        edgeNode = GetEdgeNode(context.Request),
+        requestHost = requestHostInfo.EffectiveHost,
+        requestNode = requestHostInfo.EffectiveHost,
+        forwardedHost = requestHostInfo.ForwardedHost,
         edgeNodeIp = edgeNetwork.IpAddress,
         edgeNodeHostName = edgeNetwork.HostName,
         clientIp = clientNetwork.IpAddress,
         clientHostName = clientNetwork.HostName,
+        originServerIp = originServer.IpAddress,
+        originServerHostName = originServer.HostName,
         temperatureC = temperature,
         summary = summaries[Random.Shared.Next(summaries.Length)],
         timestamp = DateTimeOffset.UtcNow
@@ -57,6 +80,7 @@ app.MapGet("/api/weather", async (HttpContext context, ILogger<Program> logger) 
 app.MapGet("/api/crawler-check", async (HttpContext context, ILogger<Program> logger) =>
 {
     LogDemoRequest("ai-crawler-governance", context, logger);
+    var requestHostInfo = GetRequestHostInfo(context.Request);
     var clientNetwork = await GetNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
     var edgeNetwork = await GetEdgeNodeNetworkInfoAsync(context.Connection.RemoteIpAddress, logger);
 
@@ -67,11 +91,17 @@ app.MapGet("/api/crawler-check", async (HttpContext context, ILogger<Program> lo
     return Results.Ok(new
     {
         demo = "ai-crawler-governance",
+        requestHost = requestHostInfo.EffectiveHost,
+        requestNode = requestHostInfo.EffectiveHost,
+        forwardedHost = requestHostInfo.ForwardedHost,
+        edgeNode = GetEdgeNode(context.Request),
         edgeNodeIp = edgeNetwork.IpAddress,
         edgeNodeHostName = edgeNetwork.HostName,
         userAgent,
         clientIp = clientNetwork.IpAddress,
         clientHostName = clientNetwork.HostName,
+        originServerIp = originServer.IpAddress,
+        originServerHostName = originServer.HostName,
         category,
         recommendation = category == "ai-crawler" || category == "scraper"
             ? "handle at edge"
@@ -82,6 +112,7 @@ app.MapGet("/api/crawler-check", async (HttpContext context, ILogger<Program> lo
 app.MapGet("/api/products", async (HttpContext context, IConfiguration configuration, ILogger<Program> logger) =>
 {
     LogDemoRequest("cache-hit-vs-origin-hit", context, logger);
+    var requestHostInfo = GetRequestHostInfo(context.Request);
     var clientNetwork = await GetNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
     var edgeNetwork = await GetEdgeNodeNetworkInfoAsync(context.Connection.RemoteIpAddress, logger);
 
@@ -95,10 +126,16 @@ app.MapGet("/api/products", async (HttpContext context, IConfiguration configura
     {
         demo = "cache-hit-vs-origin-hit",
         origin = "azure",
+        requestHost = requestHostInfo.EffectiveHost,
+        requestNode = requestHostInfo.EffectiveHost,
+        forwardedHost = requestHostInfo.ForwardedHost,
+        edgeNode = GetEdgeNode(context.Request),
         edgeNodeIp = edgeNetwork.IpAddress,
         edgeNodeHostName = edgeNetwork.HostName,
         clientIp = clientNetwork.IpAddress,
         clientHostName = clientNetwork.HostName,
+        originServerIp = originServer.IpAddress,
+        originServerHostName = originServer.HostName,
         processingDelayMs = delayMs,
         products = new[]
         {
@@ -109,7 +146,28 @@ app.MapGet("/api/products", async (HttpContext context, IConfiguration configura
     });
 });
 
-app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
+app.MapGet("/api/health", async (HttpContext context, ILogger<Program> logger) =>
+{
+    var requestHostInfo = GetRequestHostInfo(context.Request);
+    var clientNetwork = await GetNetworkInfoAsync(context.Request, context.Connection.RemoteIpAddress, logger);
+    var edgeNetwork = await GetEdgeNodeNetworkInfoAsync(context.Connection.RemoteIpAddress, logger);
+
+    return Results.Ok(new
+    {
+        status = "healthy",
+        origin = "azure",
+        requestHost = requestHostInfo.EffectiveHost,
+        requestNode = requestHostInfo.EffectiveHost,
+        forwardedHost = requestHostInfo.ForwardedHost,
+        edgeNode = GetEdgeNode(context.Request),
+        edgeNodeIp = edgeNetwork.IpAddress,
+        edgeNodeHostName = edgeNetwork.HostName,
+        clientIp = clientNetwork.IpAddress,
+        clientHostName = clientNetwork.HostName,
+        originServerIp = originServer.IpAddress,
+        originServerHostName = originServer.HostName
+    });
+});
 
 app.Run();
 
@@ -165,6 +223,59 @@ static string GetClientIpAddress(HttpRequest request, IPAddress? remoteIpAddress
     return remoteIpAddress?.ToString() ?? "unknown";
 }
 
+static RequestHostInfo GetRequestHostInfo(HttpRequest request)
+{
+    var host = request.Host.Value;
+    var forwardedHost = request.Headers["X-Forwarded-Host"].FirstOrDefault();
+    var effectiveHost = !string.IsNullOrWhiteSpace(forwardedHost) ? forwardedHost : host;
+    return new RequestHostInfo(
+        string.IsNullOrWhiteSpace(effectiveHost) ? "unknown" : effectiveHost,
+        string.IsNullOrWhiteSpace(forwardedHost) ? null : forwardedHost);
+}
+
+static string? GetEdgeNode(HttpRequest request)
+{
+    var cfRay = request.Headers["CF-Ray"].FirstOrDefault();
+    return cfRay?.Contains('-') == true ? cfRay.Split('-')[^1] : null;
+}
+
+static async Task<NetworkInfo> GetOriginServerNetworkInfoAsync(ILogger logger)
+{
+    var originServerHostName = Dns.GetHostName();
+
+    try
+    {
+        var addresses = await Dns.GetHostAddressesAsync(originServerHostName).WaitAsync(TimeSpan.FromSeconds(2));
+        var preferredAddress = addresses.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address))
+            ?? addresses.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetworkV6 && !IPAddress.IsLoopback(address))
+            ?? addresses.FirstOrDefault(address => !IPAddress.IsLoopback(address))
+            ?? addresses.FirstOrDefault();
+
+        return new NetworkInfo(
+            preferredAddress?.ToString() ?? "unknown",
+            string.IsNullOrWhiteSpace(originServerHostName) ? null : originServerHostName);
+    }
+    catch (SocketException)
+    {
+        return new NetworkInfo(
+            "unknown",
+            string.IsNullOrWhiteSpace(originServerHostName) ? null : originServerHostName);
+    }
+    catch (TimeoutException)
+    {
+        return new NetworkInfo(
+            "unknown",
+            string.IsNullOrWhiteSpace(originServerHostName) ? null : originServerHostName);
+    }
+    catch (Exception exception)
+    {
+        logger.LogWarning(exception, "Origin server network info lookup failed");
+        return new NetworkInfo(
+            "unknown",
+            string.IsNullOrWhiteSpace(originServerHostName) ? null : originServerHostName);
+    }
+}
+
 static async Task<string?> TryResolveHostNameAsync(string clientIpAddress, ILogger logger)
 {
     if (!IPAddress.TryParse(clientIpAddress, out var ipAddress))
@@ -195,5 +306,6 @@ static async Task<string?> TryResolveHostNameAsync(string clientIpAddress, ILogg
 }
 
 internal sealed record NetworkInfo(string IpAddress, string? HostName);
+internal sealed record RequestHostInfo(string EffectiveHost, string? ForwardedHost);
 
 public partial class Program;
